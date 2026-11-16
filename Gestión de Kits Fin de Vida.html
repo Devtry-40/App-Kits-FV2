@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kits Fin de Vida - Gestión de Stock</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons para iconografía clínica limpia -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Ajustes nativos para experiencia móvil fluida */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #e2e8f0;
+        }
+        /* Ocultar flechas en inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        /* Scrollbar discreta */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 12px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex justify-center items-start sm:items-center sm:py-6 text-slate-800">
+
+    <!-- Contenedor Principal Mobile-First (Simula marco móvil en escritorio, pantalla completa en celular) -->
+    <div id="app-shell" class="w-full max-w-[430px] min-h-screen sm:min-h-[820px] sm:max-h-[880px] bg-slate-50 sm:rounded-[2.25rem] sm:shadow-2xl sm:border sm:border-slate-300 flex flex-col relative overflow-hidden">
+
+        <!-- Header Superior -->
+        <header class="bg-gradient-to-r from-navy-900 via-navy-800 to-medical-900 text-white px-5 pt-5 pb-4 shrink-0 shadow-md z-10">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-medical-500/20 border border-medical-400/30 flex items-center justify-center text-medical-100">
+                        <i class="ph-fill ph-first-aid-kit text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-tight">Kits Fin de Vida</h1>
+                        <p class="text-xs text-slate-300 font-medium">Control de Fraccionado y Stock</p>
+                    </div>
+                </div>
+                <button onclick="openSettingsModal()" aria-label="Opciones y datos" class="w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition flex items-center justify-center text-white">
+                    <i class="ph ph-sliders-horizontal text-xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Área de Contenido Dinámico con Scroll -->
+        <main id="main-content" class="flex-1 overflow-y-auto px-4 pt-4 pb-28 space-y-4">
+            
+            <!-- ==================== PESTAÑA 1: KITS ARMADOS & ARMADOR ==================== -->
+            <section id="view-kits" class="space-y-4">
+                
+                <!-- Tarjeta Principal: Kits Ya Armados -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-medical-700 bg-medical-50 px-2.5 py-1 rounded-lg border border-medical-100">
+                            <i class="ph-fill ph-package"></i> Listos para entrega
+                        </span>
+                        <span class="text-xs text-slate-400 font-medium">14 insumos c/u</span>
+                    </div>
+
+                    <div class="flex items-center justify-between my-3">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Kits ya armados</p>
+                            <div class="flex items-baseline gap-2">
+                                <span id="assembled-count-display" class="text-5xl font-extrabold text-navy-900 tracking-tight">0</span>
+                                <span class="text-sm font-semibold text-slate-400">unidades</span>
+                            </div>
+                        </div>
+
+                        <!-- Controles táctiles rápidos de ajuste manual -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="adjustAssembled(-1)" class="w-12 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xl flex items-center justify-center transition border border-slate-200" title="Restar 1 kit">
+                                <i class="ph-bold ph-minus"></i>
+                            </button>
+                            <button onclick="adjustAssembled(1)" class="w-12 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xl flex items-center justify-center transition border border-slate-200" title="Sumar 1 kit manualmente">
+                                <i class="ph-bold ph-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Botón Principal de Egreso / Entrega -->
+                    <button id="btn-deliver-kit" onclick="deliverKit()" class="w-full min-h-[48px] mt-2 rounded-xl bg-navy-900 hover:bg-navy-800 disabled:bg-slate-200 disabled:text-slate-400 active:scale-[0.99] text-white font-semibold text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                        <i class="ph-bold ph-hand-heart text-lg"></i>
+                        <span>Entregar / Usar 1 Kit Armado</span>
+                    </button>
+                </div>
+
+                <!-- Tarjeta de Capacidad de Armado (Basada en Stock Sin Kits) -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <h2 class="font-bold text-base text-navy-900 flex items-center gap-2">
+                                <i class="ph-fill ph-wrench text-medical-600 text-lg"></i>
+                                Capacidad de Armado
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Calculado según insumos sueltos disponibles</p>
+                        </div>
+                        <div id="buildable-badge" class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-right shrink-0">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider">Se pueden armar</span>
+                            <span id="buildable-count-display" class="text-xl font-extrabold leading-none">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción de Armado -->
+                    <div class="grid grid-cols-1 gap-2.5">
+                        <button id="btn-assemble-one" onclick="assembleKits(1)" class="w-full min-h-[50px] rounded-xl bg-medical-600 hover:bg-medical-700 disabled:bg-slate-200 disabled:text-slate-400 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                            <i class="ph-bold ph-plus-circle text-xl"></i>
+                            <span>Armar 1 Kit (Descuenta insumos)</span>
+                        </button>
+                        
+                        <button id="btn-assemble-max" onclick="assembleMaxKits()" class="hidden w-full min-h-[44px] rounded-xl bg-medical-50 hover:bg-medical-100 border border-medical-200 active:scale-[0.99] text-medical-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i class="ph-bold ph-stack-plus text-base"></i>
+                            <span id="btn-assemble-max-text">Armar todos los posibles</span>
+                        </button>
+                    </div>
+
+                    <!-- Alerta / Lista de Cuellos de Botella y Faltantes -->
+                    <div class="pt-2 border-t border-slate-100">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                <i class="ph-fill ph-warning-circle text-amber-500 text-sm"></i>
+                                <span id="shortage-title">Faltantes para el próximo kit</span>
+                            </h3>
+                            <button onclick="switchTab('loose')" class="text-xs font-semibold text-medical-700 hover:underline">
+                                Cargar stock &rarr;
+                            </button>
+                        </div>
+                        
+                        <div id="bottleneck-list" class="space-y-2">
+                            <!-- Se llena dinámicamente con JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acceso Rápido a Receta del Kit -->
+                <div class="bg-slate-100/80 rounded-2xl p-4 border border-slate-200/70">
+                    <button onclick="toggleRecipePreview()" class="w-full flex items-center justify-between text-left min-h-[36px]">
+                        <span class="text-xs font-bold text-slate-700 flex items-center gap-2">
+                            <i class="ph-bold ph-list-checks text-medical-600 text-base"></i>
+                            Ver composición estándar de 1 Kit (14 insumos)
+                        </span>
+                        <i id="recipe-chevron" class="ph-bold ph-caret-down text-slate-500 transition-transform"></i>
+                    </button>
+                    <div id="recipe-preview-box" class="hidden mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 gap-1.5 text-xs text-slate-600">
+                        <!-- Lista de receta renderizada por JS -->
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ==================== PESTAÑA 2: STOCK SIN KITS (INSUMOS SUELTOS) ==================== -->
+            <section id="view-loose" class="hidden space-y-3">
+                
+                <!-- Banner Fijo / Destacado de Capacidad y Faltantes -->
+                <div class="sticky top-0 z-10 bg-navy-900 text-white rounded-2xl p-4 shadow-md border border-navy-800">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-medical-100">Stock Sin Kits (Sueltos)</p>
+                            <p class="text-lg font-extrabold mt-0.5">
+                                Kits posibles de armar: <span id="loose-banner-possible" class="text-medical-500 text-2xl ml-1">0</span>
+                            </p>
+                        </div>
+                        <button onclick="switchTab('kits')" class="px-3 py-2 rounded-xl bg-medical-600 hover:bg-medical-500 text-white text-xs font-bold transition shrink-0">
+                            Ir a Armar
+                        </button>
+                    </div>
+                    <div id="loose-banner-missing" class="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-slate-300 leading-relaxed">
+                        <!-- Resumen de faltantes -->
+                    </div>
+                </div>
+
+                <!-- Filtro rápido en Stock Suelto -->
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="search-loose" oninput="renderLooseList()" placeholder="Buscar insumo suelto..." class="w-full min-h-[44px] pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:border-medical-500">
+                    </div>
+                    <button id="btn-filter-missing" onclick="toggleFilterMissing()" class="min-h-[44px] px-3.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5 shrink-0">
+                        <i class="ph-bold ph-funnel"></i>
+                        <span>Faltantes</span>
+                    </button>
+                </div>
+
+                <!-- Lista de los 14 Insumos Sueltos -->
+                <div id="loose-items-container" class="space-y-2.5">
+                    <!-- Renderizado dinámico -->
+                </div>
+
+            </section>
+
+            <!-- ==================== PESTAÑA 3: STOCK TOTAL (CONSOLIDADO) ==================== -->
+            <section id="view-total" class="hidden space-y-3">
+                
+                <!-- Tarjeta Resumen Consolidado -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-base text-navy-900">Stock Total Consolidado</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Suma de sueltos + insumos dentro de <strong id="total-kits-ref" class="text-navy-800">0</strong> kits</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-medical-50 text-medical-700 flex items-center justify-center">
+                        <i class="ph-fill ph-chart-bar text-xl"></i>
+                    </div>
+                </div>
+
+                <!-- Barra de Búsqueda -->
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="search-total" oninput="renderTotalList()" placeholder="Filtrar insumo por nombre..." class="w-full min-h-[44px] pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:border-medical-500">
+                </div>
+
+                <!-- Lista Consolidada -->
+                <div id="total-items-container" class="space-y-2.5">
+                    <!-- Renderizado dinámico -->
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- Barra de Navegación Inferior Tipo App Nativa -->
+        <nav class="absolute bottom-0 inset-x-0 bg-white border-t border-slate-200 px-2 pt-1.5 safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,0.04)] z-20">
+            <div class="grid grid-cols-3 gap-1">
+                <button id="nav-kits" onclick="switchTab('kits')" class="min-h-[54px] rounded-xl flex flex-col items-center justify-center gap-1 transition text-medical-700 bg-medical-50/80 font-bold">
+                    <i class="ph-fill ph-first-aid-kit text-xl"></i>
+                    <span class="text-[11px] leading-none">Kits & Armado</span>
+                </button>
+                
+                <button id="nav-loose" onclick="switchTab('loose')" class="min-h-[54px] rounded-xl flex flex-col items-center justify-center gap-1 transition text-slate-500 hover:bg-slate-50 font-medium relative">
+                    <i class="ph ph-cubes text-xl"></i>
+                    <span class="text-[11px] leading-none">Stock Sin Kits</span>
+                    <span id="nav-shortage-dot" class="hidden absolute top-2 right-6 w-2 h-2 rounded-full bg-amber-500"></span>
+                </button>
+                
+                <button id="nav-total" onclick="switchTab('total')" class="min-h-[54px] rounded-xl flex flex-col items-center justify-center gap-1 transition text-slate-500 hover:bg-slate-50 font-medium">
+                    <i class="ph ph-clipboard-text text-xl"></i>
+                    <span class="text-[11px] leading-none">Stock Total</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Notificación Toast Flotante -->
+        <div id="toast-container" class="pointer-events-none fixed sm:absolute top-20 inset-x-4 z-50 flex flex-col items-center gap-2"></div>
+
+        <!-- Modal de Opciones / Datos de Prueba / Reinicio (Sin usar alert/confirm nativos) -->
+        <div id="settings-modal" class="hidden fixed sm:absolute inset-0 bg-slate-900/60 backdrop-blur-xs z-40 flex items-end sm:items-center justify-center p-4">
+            <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-4 animate-fade-in">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 class="font-bold text-base text-navy-900 flex items-center gap-2">
+                        <i class="ph-fill ph-database text-medical-600"></i>
+                        Gestión de Datos Locales
+                    </h3>
+                    <button onclick="closeSettingsModal()" class="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                        <i class="ph-bold ph-x"></i>
+                    </button>
+                </div>
+                
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Tus cambios se guardan automáticamente en este dispositivo. Podés cargar un inventario de ejemplo para probar el armado o poner todo en cero.
+                </p>
+
+                <div class="space-y-2.5 pt-1">
+                    <button onclick="loadDemoData()" class="w-full min-h-[46px] rounded-xl bg-medical-50 hover:bg-medical-100 border border-medical-200 text-medical-800 font-semibold text-sm flex items-center justify-center gap-2 transition">
+                        <i class="ph-bold ph-magic-wand"></i>
+                        <span>Cargar Stock de Ejemplo (Prueba)</span>
+                    </button>
+
+                    <div id="reset-confirm-box" class="pt-1">
+                        <button id="btn-ask-reset" onclick="showResetConfirm()" class="w-full min-h-[46px] rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-semibold text-sm flex items-center justify-center gap-2 transition">
+                            <i class="ph-bold ph-trash"></i>
+                            <span>Reiniciar Todo el Stock a 0</span>
+                        </button>
+                        <div id="reset-confirm-actions" class="hidden bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2.5">
+                            <p class="text-xs font-semibold text-rose-800 text-center">¿Seguro que querés borrar todo el stock?</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="hideResetConfirm()" class="min-h-[40px] rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-bold">Cancelar</button>
+                                <button onclick="resetAllData()" class="min-h-[40px] rounded-lg bg-rose-600 text-white text-xs font-bold">Sí, poner en 0</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Edición Directa de Cantidad (Teclado Numérico Cómodo en Celular) -->
+        <div id="edit-qty-modal" class="hidden fixed sm:absolute inset-0 bg-slate-900/60 backdrop-blur-xs z-40 flex items-end sm:items-center justify-center p-4">
+            <div class="bg-white w-full rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-medical-600">Editar Stock Suelto</span>
+                        <h3 id="edit-modal-title" class="font-bold text-base text-navy-900 mt-0.5">Nombre del insumo</h3>
+                        <p id="edit-modal-req" class="text-xs text-slate-500">Requerido por kit: 10 un.</p>
+                    </div>
+                    <button onclick="closeEditModal()" class="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                        <i class="ph-bold ph-x"></i>
+                    </button>
+                </div>
+
+                <div>
+                    <label for="edit-modal-input" class="block text-xs font-semibold text-slate-600 mb-1.5">Cantidad suelta actual:</label>
+                    <input type="number" id="edit-modal-input" inputmode="numeric" min="0" class="w-full h-14 px-4 rounded-xl border-2 border-medical-500 text-2xl font-extrabold text-navy-900 text-center focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="quickAddModal(5)" class="min-h-[42px] rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700">+5</button>
+                    <button onclick="quickAddModal(10)" class="min-h-[42px] rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700">+10</button>
+                    <button onclick="quickAddModal(20)" class="min-h-[42px] rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700">+20</button>
+                    <button onclick="quickAddModal(50)" class="min-h-[42px] rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700">+50</button>
+                </div>
+
+                <button onclick="saveEditModal()" class="w-full min-h-[48px] rounded-xl bg-medical-600 hover:bg-medical-700 text-white font-bold text-sm transition">
+                    Guardar Cantidad
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * DEFINICIÓN EXACTA DEL KIT FIN DE VIDA (14 INSUMOS)
+         */
+        const KIT_RECIPE = [
+            { id: 'sol_fisio', name: 'Soluciones fisiológicas', req: 10, unit: 'un.' },
+            { id: 'tegaderm', name: 'Apósitos Tegaderm', req: 3, unit: 'un.' },
+            { id: 'guias_v14', name: 'Guías macro V-14', req: 10, unit: 'un.' },
+            { id: 'alcohol_500', name: 'Alcohol 500ml', req: 1, unit: 'frasco' },
+            { id: 'gasas_10x10', name: 'Gasas estériles 10x10', req: 10, unit: 'un.' },
+            { id: 'guantes_100', name: 'Guantes de látex (caja x100 un)', req: 1, unit: 'caja' },
+            { id: 'descartador_2l', name: 'Descartador de agujas 2lt', req: 1, unit: 'un.' },
+            { id: 'jeringa_10ml', name: 'Jeringas de 10ml', req: 10, unit: 'un.' },
+            { id: 'jeringa_3ml', name: 'Jeringas de 3ml', req: 10, unit: 'un.' },
+            { id: 'jeringa_1ml', name: 'Jeringas de 1ml', req: 10, unit: 'un.' },
+            { id: 'tapones_cateter', name: 'Tapones de catéter', req: 3, unit: 'un.' },
+            { id: 'cinta_hipo', name: 'Cinta hipoalergénica 2,5cm', req: 1, unit: 'rollo' },
+            { id: 'agujas_23g', name: 'Agujas 23G', req: 3, unit: 'un.' },
+            { id: 'agujas_25x8', name: 'Agujas 25x8', req: 20, unit: 'un.' }
+        ];
+
+        const STORAGE_KEY = 'kits_fin_de_vida_state_v1';
+
+        // Estado global de la aplicación
+        let appState = {
+            assembledKits: 0,
+            looseStock: {}, // { [id]: number }
+            activeTab: 'kits',
+            filterOnlyMissing: false,
+            editingItemId: null
+        };
+
+        /**
+         * Inicializa el estado desde localStorage o crea estructura base
+         */
+        function initApp() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appState.assembledKits = Number(parsed.assembledKits) || 0;
+                    appState.looseStock = parsed.looseStock || {};
+                } else {
+                    // Primera vez: cargar datos iniciales realistas para facilitar visualización inmediata
+                    setInitialDefaultStock();
+                }
+            } catch (e) {
+                console.error('Error leyendo localStorage:', e);
+                setInitialDefaultStock();
+            }
+
+            // Asegurar que todos los 14 insumos existan en looseStock
+            KIT_RECIPE.forEach(item => {
+                if (typeof appState.looseStock[item.id] !== 'number' || appState.looseStock[item.id] < 0) {
+                    appState.looseStock[item.id] = 0;
+                }
+            });
+
+            renderRecipePreview();
+            refreshUI();
+        }
+
+        /**
+         * Establece un inventario inicial de muestra en el primer uso
+         */
+        function setInitialDefaultStock() {
+            appState.assembledKits = 2;
+            appState.looseStock = {
+                sol_fisio: 25,       // Alcanza para 2 kits (sobran 5)
+                tegaderm: 8,         // Alcanza para 2 kits (sobran 2)
+                guias_v14: 18,       // Alcanza para 1 kit (faltan 2 para el 2do)
+                alcohol_500: 3,      // Alcanza para 3 kits
+                gasas_10x10: 30,     // Alcanza para 3 kits
+                guantes_100: 2,      // Alcanza para 2 kits
+                descartador_2l: 4,   // Alcanza para 4 kits
+                jeringa_10ml: 22,    // Alcanza para 2 kits
+                jeringa_3ml: 15,     // Alcanza para 1 kit (faltan 5 para el 2do)
+                jeringa_1ml: 20,     // Alcanza para 2 kits
+                tapones_cateter: 9,  // Alcanza para 3 kits
+                cinta_hipo: 3,       // Alcanza para 3 kits
+                agujas_23g: 6,       // Alcanza para 2 kits
+                agujas_25x8: 35      // Alcanza para 1 kit (faltan 5 para el 2do)
+            };
+            saveState();
+        }
+
+        /**
+         * Guarda el estado actual en localStorage
+         */
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    assembledKits: appState.assembledKits,
+                    looseStock: appState.looseStock
+                }));
+            } catch (e) {
+                console.error('Error guardando en localStorage:', e);
+            }
+        }
+
+        /**
+         * Calcula métricas clave del inventario suelto:
+         * - Cuántos kits completos se pueden armar
+         * - Qué insumos faltan para llegar al próximo kit (possibleKits + 1)
+         */
+        function calculateBuildMetrics() {
+            let maxPossible = Infinity;
+
+            const itemAnalysis = KIT_RECIPE.map(item => {
+                const currentLoose = appState.looseStock[item.id] || 0;
+                const kitsCovered = Math.floor(currentLoose / item.req);
+                if (kitsCovered < maxPossible) {
+                    maxPossible = kitsCovered;
+                }
+                return {
+                    ...item,
+                    currentLoose,
+                    kitsCovered
+                };
+            });
+
+            if (maxPossible === Infinity) maxPossible = 0;
+
+            // Objetivo: armar (maxPossible + 1) kits
+            const targetKits = maxPossible + 1;
+            const shortages = [];
+
+            itemAnalysis.forEach(item => {
+                const requiredForNext = targetKits * item.req;
+                if (item.currentLoose < requiredForNext) {
+                    shortages.push({
+                        ...item,
+                        missingForNext: requiredForNext - item.currentLoose,
+                        requiredForNext
+                    });
+                }
+            });
+
+            // Ordenar faltantes: primero los que tienen 0 kits cubiertos, luego por mayor urgencia relativa
+            shortages.sort((a, b) => (a.currentLoose / a.req) - (b.currentLoose / b.req));
+
+            return {
+                possibleKits: maxPossible,
+                targetKits,
+                itemAnalysis,
+                shortages
+            };
+        }
+
+        /**
+         * Actualiza todas las vistas de la interfaz
+         */
+        function refreshUI() {
+            const metrics = calculateBuildMetrics();
+            renderKitsTab(metrics);
+            renderLooseList(metrics);
+            renderTotalList();
+            updateNavBadges(metrics);
+        }
+
+        /**
+         * Renderiza la Pestaña 1: Kits Armados & Capacidad de Armado
+         */
+        function renderKitsTab(metrics) {
+            // Contador de kits armados
+            document.getElementById('assembled-count-display').textContent = appState.assembledKits;
+            document.getElementById('btn-deliver-kit').disabled = appState.assembledKits <= 0;
+
+            // Capacidad de armado
+            const possible = metrics.possibleKits;
+            const buildableDisplay = document.getElementById('buildable-count-display');
+            const buildableBadge = document.getElementById('buildable-badge');
+            const btnAssembleOne = document.getElementById('btn-assemble-one');
+            const btnAssembleMax = document.getElementById('btn-assemble-max');
+
+            buildableDisplay.textContent = possible;
+
+            if (possible > 0) {
+                buildableBadge.className = 'px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-right shrink-0';
+                btnAssembleOne.disabled = false;
+            } else {
+                buildableBadge.className = 'px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-right shrink-0';
+                btnAssembleOne.disabled = true;
+            }
+
+            if (possible >= 2) {
+                btnAssembleMax.classList.remove('hidden');
+                document.getElementById('btn-assemble-max-text').textContent = `Armar todos los posibles (${possible} kits)`;
+            } else {
+                btnAssembleMax.classList.add('hidden');
+            }
+
+            // Lista de cuellos de botella / faltantes para el siguiente kit
+            const titleEl = document.getElementById('shortage-title');
+            titleEl.textContent = possible === 0 
+                ? 'Insumos faltantes para armar 1 kit:' 
+                : `Para armar el kit #${possible + 1} faltan:`;
+
+            const bottleneckContainer = document.getElementById('bottleneck-list');
+            if (metrics.shortages.length === 0) {
+                bottleneckContainer.innerHTML = `
+                    <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
+                        <i class="ph-fill ph-check-circle text-base text-emerald-600"></i>
+                        <span>¡Stock suelto completo! Tenés insumos suficientes.</span>
+                    </div>
+                `;
+            } else {
+                bottleneckContainer.innerHTML = metrics.shortages.map(item => `
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs">
+                        <div class="pr-2">
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-[11px] text-slate-500">Tenés <strong class="text-slate-700">${item.currentLoose}</strong> sueltos (necesitás ${item.requiredForNext})</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-extrabold whitespace-nowrap shrink-0">
+                            Faltan ${item.missingForNext}
+                        </span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        /**
+         * Renderiza la Pestaña 2: Stock Sin Kits (Insumos Sueltos)
+         */
+        function renderLooseList(precomputedMetrics) {
+            const metrics = precomputedMetrics || calculateBuildMetrics();
+            const searchQuery = (document.getElementById('search-loose').value || '').toLowerCase().trim();
+
+            // Actualizar banner superior fijo
+            document.getElementById('loose-banner-possible').textContent = metrics.possibleKits;
+            const bannerMissing = document.getElementById('loose-banner-missing');
+            
+            if (metrics.shortages.length > 0) {
+                const topShortages = metrics.shortages.slice(0, 3).map(s => `<strong class="text-amber-300">${s.name}</strong> (-${s.missingForNext})`).join(', ');
+                const extraCount = metrics.shortages.length > 3 ? ` y ${metrics.shortages.length - 3} más` : '';
+                bannerMissing.innerHTML = `<span class="text-amber-400 font-semibold">Falta para el próximo kit:</span> ${topShortages}${extraCount}.`;
+            } else {
+                bannerMissing.innerHTML = `<span class="text-emerald-400 font-semibold">¡Stock listo para armar!</span>`;
+            }
+
+            // Filtrar lista
+            const filtered = metrics.itemAnalysis.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+                const isMissingForNext = item.currentLoose < (metrics.possibleKits + 1) * item.req;
+                if (appState.filterOnlyMissing && !isMissingForNext) return false;
+                return matchesSearch;
+            });
+
+            const container = document.getElementById('loose-items-container');
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400 text-sm">
+                        No se encontraron insumos con ese filtro.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const missingForOne = Math.max(0, item.req - item.currentLoose);
+                const missingForNext = Math.max(0, (metrics.possibleKits + 1) * item.req - item.currentLoose);
+                
+                let statusBadge = '';
+                if (item.kitsCovered === 0) {
+                    statusBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                        <i class="ph-fill ph-warning"></i> Faltan ${missingForOne} un. para 1 kit
+                    </span>`;
+                } else if (missingForNext > 0) {
+                    statusBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        Alcanza para ${item.kitsCovered} ${item.kitsCovered === 1 ? 'kit' : 'kits'} · <span class="text-amber-700">faltan ${missingForNext} p/ #${metrics.possibleKits + 1}</span>
+                    </span>`;
+                } else {
+                    statusBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        <i class="ph-fill ph-check-circle"></i> Alcanza para ${item.kitsCovered} ${item.kitsCovered === 1 ? 'kit' : 'kits'}
+                    </span>`;
+                }
+
+                return `
+                    <div class="bg-white rounded-2xl p-3.5 shadow-xs border border-slate-200/80 space-y-2.5">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h3 class="font-bold text-sm text-navy-900 leading-snug">${item.name}</h3>
+                                <p class="text-[11px] text-slate-400 font-medium mt-0.5">Receta: <strong class="text-slate-600">${item.req} ${item.unit}</strong> por kit</p>
+                            </div>
+                            <!-- Botón para edición directa tocando el número -->
+                            <button onclick="openEditModal('${item.id}')" class="min-w-[64px] min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-medical-50 border border-slate-200 hover:border-medical-300 flex flex-col items-center justify-center transition" title="Tocar para editar cantidad">
+                                <span class="text-lg font-extrabold text-navy-900 leading-none">${item.currentLoose}</span>
+                                <span class="text-[9px] font-semibold text-slate-400 uppercase mt-0.5">sueltos</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                            <div class="flex-1">
+                                ${statusBadge}
+                            </div>
+
+                            <!-- Controles táctiles rápidos (-1, +1, +10) -->
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="changeLooseStock('${item.id}', -1)" class="w-11 h-11 rounded-xl bg-slate-100 hover:bg-rose-100 active:scale-95 text-slate-700 hover:text-rose-700 font-bold text-sm flex items-center justify-center transition border border-slate-200">
+                                    -1
+                                </button>
+                                <button onclick="changeLooseStock('${item.id}', 1)" class="w-11 h-11 rounded-xl bg-medical-50 hover:bg-medical-100 active:scale-95 text-medical-800 font-bold text-sm flex items-center justify-center transition border border-medical-200">
+                                    +1
+                                </button>
+                                <button onclick="changeLooseStock('${item.id}', 10)" class="w-11 h-11 rounded-xl bg-medical-600 hover:bg-medical-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center transition shadow-2xs">
+                                    +10
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Renderiza la Pestaña 3: Stock Total Consolidado
+         */
+        function renderTotalList() {
+            const searchQuery = (document.getElementById('search-total').value || '').toLowerCase().trim();
+            document.getElementById('total-kits-ref').textContent = appState.assembledKits;
+
+            const filtered = KIT_RECIPE.filter(item => item.name.toLowerCase().includes(searchQuery));
+            const container = document.getElementById('total-items-container');
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400 text-sm">
+                        No se encontraron insumos con ese nombre.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const looseQty = appState.looseStock[item.id] || 0;
+                const inKitsQty = appState.assembledKits * item.req;
+                const totalQty = looseQty + inKitsQty;
+
+                return `
+                    <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 flex items-center justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-bold text-sm text-navy-900 truncate">${item.name}</h3>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs">
+                                <span class="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                                    Sueltos: <strong class="text-navy-900">${looseQty}</strong>
+                                </span>
+                                <span class="inline-flex items-center gap-1 text-medical-800 bg-medical-50 px-2 py-0.5 rounded-md font-medium">
+                                    En kits: <strong>${inKitsQty}</strong>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 pl-2 border-l border-slate-100">
+                            <span class="block text-2xl font-extrabold text-navy-900 leading-none">${totalQty}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Actualiza indicadores visuales en la barra inferior
+         */
+        function updateNavBadges(metrics) {
+            const dot = document.getElementById('nav-shortage-dot');
+            if (metrics.possibleKits === 0) {
+                dot.classList.remove('hidden');
+            } else {
+                dot.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Renderiza la lista desplegable de la receta del kit
+         */
+        function renderRecipePreview() {
+            const box = document.getElementById('recipe-preview-box');
+            box.innerHTML = KIT_RECIPE.map(item => `
+                <div class="flex items-center justify-between py-1 border-b border-slate-200/50 last:border-0">
+                    <span>${item.name}</span>
+                    <span class="font-bold text-navy-800">${item.req} ${item.unit}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleRecipePreview() {
+            const box = document.getElementById('recipe-preview-box');
+            const chevron = document.getElementById('recipe-chevron');
+            box.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        /**
+         * Cambia entre las 3 pestañas principales
+         */
+        function switchTab(tabName) {
+            appState.activeTab = tabName;
+            
+            const views = {
+                kits: document.getElementById('view-kits'),
+                loose: document.getElementById('view-loose'),
+                total: document.getElementById('view-total')
+            };
+
+            const navs = {
+                kits: document.getElementById('nav-kits'),
+                loose: document.getElementById('nav-loose'),
+                total: document.getElementById('nav-total')
+            };
+
+            Object.keys(views).forEach(key => {
+                if (key === tabName) {
+                    views[key].classList.remove('hidden');
+                    navs[key].className = 'min-h-[54px] rounded-xl flex flex-col items-center justify-center gap-1 transition text-medical-700 bg-medical-50/80 font-bold relative';
+                    navs[key].querySelector('i').classList.replace('ph', 'ph-fill');
+                } else {
+                    views[key].classList.add('hidden');
+                    navs[key].className = 'min-h-[54px] rounded-xl flex flex-col items-center justify-center gap-1 transition text-slate-500 hover:bg-slate-50 font-medium relative';
+                    navs[key].querySelector('i').classList.replace('ph-fill', 'ph');
+                }
+            });
+
+            document.getElementById('main-content').scrollTop = 0;
+        }
+
+        /**
+         * Acción: Armar N kits descontando insumos del stock suelto
+         */
+        function assembleKits(count) {
+            const metrics = calculateBuildMetrics();
+            if (metrics.possibleKits < count) {
+                showToast('No hay suficientes insumos sueltos para armar el kit.', 'error');
+                return;
+            }
+
+            KIT_RECIPE.forEach(item => {
+                appState.looseStock[item.id] = Math.max(0, (appState.looseStock[item.id] || 0) - (item.req * count));
+            });
+
+            appState.assembledKits += count;
+            saveState();
+            refreshUI();
+
+            const msg = count === 1 
+                ? '¡Kit armado! Se descontaron los insumos sueltos.' 
+                : `¡${count} kits armados! Stock actualizado.`;
+            showToast(msg, 'success');
+        }
+
+        /**
+         * Acción: Armar todos los kits posibles con el stock suelto actual
+         */
+        function assembleMaxKits() {
+            const metrics = calculateBuildMetrics();
+            if (metrics.possibleKits > 0) {
+                assembleKits(metrics.possibleKits);
+            }
+        }
+
+        /**
+         * Acción: Entregar / usar 1 kit armado
+         */
+        function deliverKit() {
+            if (appState.assembledKits <= 0) return;
+            appState.assembledKits -= 1;
+            saveState();
+            refreshUI();
+            showToast('Kit entregado. Se descontó 1 unidad de kits armados.', 'info');
+        }
+
+        /**
+         * Ajuste manual directo (+/-) de kits armados sin tocar stock suelto
+         */
+        function adjustAssembled(delta) {
+            const nextVal = appState.assembledKits + delta;
+            if (nextVal < 0) return;
+            appState.assembledKits = nextVal;
+            saveState();
+            refreshUI();
+        }
+
+        /**
+         * Modifica el stock suelto de un insumo específico
+         */
+        function changeLooseStock(itemId, delta) {
+            const current = appState.looseStock[itemId] || 0;
+            const updated = Math.max(0, current + delta);
+            if (updated === current) return;
+
+            appState.looseStock[itemId] = updated;
+            saveState();
+            refreshUI();
+        }
+
+        /**
+         * Alterna el filtro de "solo faltantes" en Stock Sin Kits
+         */
+        function toggleFilterMissing() {
+            appState.filterOnlyMissing = !appState.filterOnlyMissing;
+            const btn = document.getElementById('btn-filter-missing');
+            if (appState.filterOnlyMissing) {
+                btn.className = 'min-h-[44px] px-3.5 rounded-xl bg-amber-100 border border-amber-300 text-xs font-bold text-amber-900 transition flex items-center gap-1.5 shrink-0';
+            } else {
+                btn.className = 'min-h-[44px] px-3.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition flex items-center gap-1.5 shrink-0';
+            }
+            renderLooseList();
+        }
+
+        /**
+         * Modal de Edición Numérica Directa
+         */
+        function openEditModal(itemId) {
+            const item = KIT_RECIPE.find(i => i.id === itemId);
+            if (!item) return;
+
+            appState.editingItemId = itemId;
+            document.getElementById('edit-modal-title').textContent = item.name;
+            document.getElementById('edit-modal-req').textContent = `Requerido por kit: ${item.req} ${item.unit}`;
+            
+            const input = document.getElementById('edit-modal-input');
+            input.value = appState.looseStock[itemId] || 0;
+
+            document.getElementById('edit-qty-modal').classList.remove('hidden');
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 50);
+        }
+
+        function closeEditModal() {
+            appState.editingItemId = null;
+            document.getElementById('edit-qty-modal').classList.add('hidden');
+        }
+
+        function quickAddModal(amount) {
+            const input = document.getElementById('edit-modal-input');
+            const current = parseInt(input.value, 10) || 0;
+            input.value = Math.max(0, current + amount);
+        }
+
+        function saveEditModal() {
+            if (!appState.editingItemId) return;
+            const input = document.getElementById('edit-modal-input');
+            const parsed = parseInt(input.value, 10);
+            appState.looseStock[appState.editingItemId] = isNaN(parsed) || parsed < 0 ? 0 : parsed;
+            
+            saveState();
+            refreshUI();
+            closeEditModal();
+            showToast('Cantidad actualizada correctamente.', 'success');
+        }
+
+        /**
+         * Modal de Configuración y Gestión de Datos
+         */
+        function openSettingsModal() {
+            hideResetConfirm();
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function showResetConfirm() {
+            document.getElementById('btn-ask-reset').classList.add('hidden');
+            document.getElementById('reset-confirm-actions').classList.remove('hidden');
+        }
+
+        function hideResetConfirm() {
+            document.getElementById('btn-ask-reset').classList.remove('hidden');
+            document.getElementById('reset-confirm-actions').classList.add('hidden');
+        }
+
+        function loadDemoData() {
+            setInitialDefaultStock();
+            refreshUI();
+            closeSettingsModal();
+            showToast('Datos de ejemplo cargados.', 'info');
+        }
+
+        function resetAllData() {
+            appState.assembledKits = 0;
+            KIT_RECIPE.forEach(item => {
+                appState.looseStock[item.id] = 0;
+            });
+            saveState();
+            refreshUI();
+            closeSettingsModal();
+            showToast('Todo el inventario se reinició a 0.', 'info');
+        }
+
+        /**
+         * Sistema de Notificaciones Toast
+         */
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const styles = {
+                success: 'bg-emerald-900 text-white border-emerald-700',
+                error: 'bg-rose-900 text-white border-rose-700',
+                info: 'bg-navy-900 text-white border-slate-700'
+            };
+
+            const icons = {
+                success: 'ph-fill ph-check-circle text-emerald-400',
+                error: 'ph-fill ph-warning-circle text-rose-400',
+                info: 'ph-fill ph-info text-medical-400'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold transition-all duration-300 transform translate-y-0 opacity-100 ${styles[type] || styles.info}`;
+            toast.innerHTML = `
+                <i class="${icons[type] || icons.info} text-lg shrink-0"></i>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
+
+        // Permitir guardar con Enter en el modal de edición
+        document.getElementById('edit-modal-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                saveEditModal();
+            }
+        });
+
+        // Iniciar aplicación al cargar
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
